@@ -2,6 +2,7 @@ package parser.animevost;
 
 import java.awt.image.BufferedImage;
 import java.io.File;
+import java.io.FileWriter;
 import java.io.IOException;
 import java.net.URL;
 import java.util.ArrayList;
@@ -11,6 +12,7 @@ import javax.imageio.ImageIO;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
+import org.jsoup.select.Elements;
 
 public class App {
 	Document pageWith10Anime, eachAnime;
@@ -22,8 +24,10 @@ public class App {
 	String SELECTOR_TITLE_ANIME_ON_PAGE = ".shortstory .shortstoryHead a";
 	String SELECTOR_MAIN_AVATAR_ON_EACH_PAGE = ".shortstoryContent .imgRadius";
 	String SELECTOR_SCREENS_ON_EACH_PAGE = ".skrin a";
+	String SELECTOR_DESCRIPTION = "#dle-content  div.shortstory  div.shortstoryContent  span[itemprop=description]";
 
-	int MIN_PAGE = 59;
+	String description = "";
+	int MIN_PAGE = 1;
 	int MAX_PAGE = 246;
 	int currentPage;
 
@@ -67,7 +71,7 @@ public class App {
 	private void goToOneAnimePage(Element element) {
 		try {
 			hrefToOneAnimePage = element.attr("href");
-			System.out.println("\t\t\t" + hrefToOneAnimePage);
+//			System.out.println("\t\t\t" + hrefToOneAnimePage);
 
 			eachAnime = Jsoup.connect(element.attr("href")).get();
 
@@ -80,15 +84,24 @@ public class App {
 	private void parseOnePage(Document page) {
 		getAvatarImage(page);
 		getScreensImage(page);
-
+		description = getDescriptionText(page);
 		String animePageTitle = page.title();
-		
-		animePageTitle = getNormalFolderName(animePageTitle); 
-		
-		
+
+		animePageTitle = getNormalFolderName(animePageTitle);
+
 		save(animePageTitle);
 
 		oneAnimeImages.clear();
+	}
+
+	private String getDescriptionText(Document page) {
+		Elements select = page.select(SELECTOR_DESCRIPTION);
+		if (select != null) {
+			temp = select.text();
+			if (temp.length() > 0)
+				return temp;
+		}
+		return null;
 	}
 
 	private String getNormalFolderName(String animePageTitle) {
@@ -98,22 +111,34 @@ public class App {
 			animePageTitle = animePageTitle.substring(0, animePageTitle.indexOf("/")).trim();
 
 		animePageTitle = animePageTitle.replaceAll("(?U)[\\pP\\s]", " ").trim();
-		
-		animePageTitle=animePageTitle.replace("второй сезон", "").replace("третий сезон", "")
-									.replace("четвертый сезон", "").replace("пятый сезон", "")
-									.replace("шестой сезон", "").replace("седьмой сезон", "").replace("восьмой сезон", "")
-									.trim();
-		
+
+		animePageTitle = animePageTitle.replace("второй сезон", "").replace("третий сезон", "")
+				.replace("четвертый сезон", "").replace("пятый сезон", "").replace("шестой сезон", "")
+				.replace("седьмой сезон", "").replace("восьмой сезон", "").trim();
+
 		return animePageTitle;
 	}
 
 	private void save(String animePageTitle) {
 		saveImages(animePageTitle);
+		saveDescription(animePageTitle);
+
+	}
+
+	private void saveDescription(String folder) {
+		new File("anime\\" + folder).mkdirs();
+		System.out.println("\t\t"+description);
+		if (description != null && description.length() > 0)
+			try (FileWriter writer = new FileWriter("anime\\" + folder + "\\description.txt", false)) {
+				writer.write(description);
+				writer.flush();
+			} catch (IOException ex) {
+				System.out.println(ex.getMessage());
+			}
 
 	}
 
 	private void saveImages(String folder) {
-		System.out.println(folder);
 		new File("anime\\" + folder).mkdirs();
 
 		for (int i = 0; i < oneAnimeImages.size(); i++) {
@@ -122,7 +147,7 @@ public class App {
 				URL url = new URL(oneAnimeImages.get(i));
 				image = ImageIO.read(url);
 				if (image != null) {
-					ImageIO.write(image, "jpg", new File("anime\\" + folder+ "\\" + i + ".jpg"));
+					ImageIO.write(image, "jpg", new File("anime\\" + folder + "\\" + i + ".jpg"));
 				}
 			} catch (Exception e) {
 				e.printStackTrace();
@@ -136,7 +161,6 @@ public class App {
 			if (!temp.contains("animevost.org"))
 				temp = "https://animevost.org" + temp;
 			oneAnimeImages.add(temp);
-//			System.out.println(temp);
 		}
 	}
 
@@ -146,7 +170,6 @@ public class App {
 			if (!temp.contains("animevost.org"))
 				temp = "https://animevost.org" + temp;
 			oneAnimeImages.add(temp);
-//			System.out.println(temp);
 		}
 	}
 
