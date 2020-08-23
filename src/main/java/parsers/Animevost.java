@@ -6,6 +6,7 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.net.URL;
 import java.util.ArrayList;
+import java.util.Scanner;
 
 import javax.imageio.ImageIO;
 
@@ -13,6 +14,8 @@ import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
 import org.jsoup.select.Elements;
+
+import helper.Saver;
 
 public class Animevost {
 	Document pageWithAnime, pageAnime;
@@ -27,16 +30,46 @@ public class Animevost {
 	String SELECTOR_DESCRIPTION = "#dle-content  div.shortstory  div.shortstoryContent  span[itemprop=description]";
 
 	String description = "";
-	int MIN_PAGE = 1;
-	int MAX_PAGE = 246;
 	int currentPage;
+	private String pathToSaveFolder;
+	private String descriptionFilename;
+	private boolean saveDescription;
+	private boolean saveImage;
+	private int startPage;
+	private int endPage;
 
 	public static void main(String[] args) {
-		System.out.println("Hello World!");
+		System.out.println("Starting");
+		System.out.println("______________________________________________________");
+
 		Animevost animevost = new Animevost();
-//		animevost.getSaveInfo();
+		animevost.getSaveInfo();
 		animevost.parse();
+		
+		System.out.println("______________________________________________________");
 		System.out.println("The End");
+	}
+
+	private void getSaveInfo() {
+		Scanner sc = new Scanner(System.in);
+
+		System.out.println("Please, input path to save folder");
+		pathToSaveFolder = sc.nextLine();
+
+		System.out.println("Please, input filename.txt to description file");
+		descriptionFilename = sc.nextLine();
+
+		System.out.println("Is description save? (true/false)");
+		saveDescription = sc.nextBoolean();
+
+		System.out.println("Is photo save? (true/false)");
+		saveImage = sc.nextBoolean();
+		
+		System.out.println("Please, input number of start page");
+		startPage=sc.nextInt();
+		
+		System.out.println("Please, input number of end page");
+		endPage=sc.nextInt();
 	}
 
 	public void parse() {
@@ -44,7 +77,7 @@ public class Animevost {
 	}
 
 	private void forEachPage() {
-		for (currentPage = MIN_PAGE; currentPage <= MAX_PAGE; currentPage++) {
+		for (currentPage = startPage; currentPage <= endPage; currentPage++) {
 			System.out.println("PAGE:  " + currentPage);
 			gotoPageWith10Anime(SITE + currentPage);
 		}
@@ -73,7 +106,6 @@ public class Animevost {
 	private void goToOneAnimePage(Element element) {
 		try {
 			urlToAnimePage = element.attr("href");
-//			System.out.println("\t\t\t" + hrefToOneAnimePage);
 
 			pageAnime = Jsoup.connect(element.attr("href")).get();
 
@@ -122,39 +154,20 @@ public class Animevost {
 	}
 
 	private void save(String animePageTitle) {
+		if(saveImage)
 		saveImages(animePageTitle);
+		if(saveDescription)
 		saveDescription(animePageTitle);
 
 	}
 
-	private void saveDescription(String folder) {
-		new File("anime\\" + folder).mkdirs();
-		System.out.println("\t\t"+description);
-		if (description != null && description.length() > 0)
-			try (FileWriter writer = new FileWriter("anime\\" + folder + "\\description.txt", false)) {
-				writer.write(description);
-				writer.flush();
-			} catch (IOException ex) {
-				System.out.println(ex.getMessage());
-			}
-
+	private void saveDescription(String folderName) {
+		Saver.SaveText(description, pathToSaveFolder+Saver.SEPARATOR+folderName, descriptionFilename);
 	}
 
-	private void saveImages(String folder) {
-		new File("anime\\" + folder).mkdirs();
-
-		for (int i = 0; i < oneAnimeImages.size(); i++) {
-			try {
-				BufferedImage image = null;
-				URL url = new URL(oneAnimeImages.get(i));
-				image = ImageIO.read(url);
-				if (image != null) {
-					ImageIO.write(image, "jpg", new File("anime\\" + folder + "\\" + i + ".jpg"));
-				}
-			} catch (Exception e) {
-				e.printStackTrace();
-			}
-		}
+	private void saveImages(String folderName) {
+		for (int i = 0; i < oneAnimeImages.size(); i++) 
+			Saver.SaveImageFromUrl(oneAnimeImages.get(i), pathToSaveFolder+Saver.SEPARATOR+folderName, folderName+i);
 	}
 
 	private void getScreensImage(Document page) {
